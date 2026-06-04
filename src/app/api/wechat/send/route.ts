@@ -17,8 +17,9 @@ export async function POST(req: NextRequest) {
   const { data: config } = await supabase
     .from('wechat_config')
     .select('webhook_url')
-    .eq('id', 1)
-    .single()
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (!config?.webhook_url) return NextResponse.json({ error: '请先配置企业微信 Webhook' }, { status: 400 })
 

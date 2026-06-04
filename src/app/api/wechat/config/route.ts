@@ -2,16 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
 export async function GET() {
-  const { data: configs } = await supabase
+  const { data: configs, error: configError } = await supabase
     .from('wechat_config')
-    .select('webhook_url')
+    .select('id, webhook_url')
     .order('updated_at', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
 
-  const { data: phones } = await supabase
+  if (configError) {
+    return NextResponse.json({ error: configError.message }, { status: 500 })
+  }
+
+  const { data: phones, error: phonesError } = await supabase
     .from('person_phone_map')
     .select('name, phone')
+
+  if (phonesError) {
+    return NextResponse.json({ error: phonesError.message }, { status: 500 })
+  }
 
   return NextResponse.json({
     webhook_url: configs?.webhook_url || '',
@@ -23,17 +31,34 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { webhook_url, phone_map } = body
 
-  // Upsert webhook
-  await supabase.from('wechat_config').upsert(
-    { id: 1, webhook_url, updated_at: new Date().toISOString() },
-    { onConflict: 'id' }
-  )
+  if (!webhook_url || typeof webhook_url !== 'string') {
+    return NextResponse.json({ error: 'Webhook 地址不能为空' }, { status: 400 })
+  }
 
-  // Clear and re-insert phone map
-  await supabase.from('person_phone_map').delete().neq('id', 0)
+  const { error: deleteConfigError } = await supabase.from('wechat_config').delete().neq('id', 0)
+  if (deleteConfigError) {
+    return NextResponse.json({ error: deleteConfigError.message }, { status: 500 })
+  }
+
+  const { error: insertConfigError } = await supabase
+    .from('wechat_config')
+    .insert({ webhook_url: webhook_url.trim(), updated_at: new Date().toISOString() })
+
+  if (insertConfigError) {
+    return NextResponse.json({ error: insertConfigError.message }, { status: 500 })
+  }
+
+  const { error: deletePhonesError } = await supabase.from('person_phone_map').delete().neq('id', 0)
+  if (deletePhonesError) {
+    return NextResponse.json({ error: deletePhonesError.message }, { status: 500 })
+  }
+
   if (phone_map && Object.keys(phone_map).length) {
     const rows = Object.entries(phone_map).map(([name, phone]) => ({ name, phone: phone as string }))
-    await supabase.from('person_phone_map').insert(rows)
+    const { error: insertPhonesError } = await supabase.from('person_phone_map').insert(rows)
+    if (insertPhonesError) {
+      return NextResponse.json({ error: insertPhonesError.message }, { status: 500 })
+    }
   }
 
   return NextResponse.json({ ok: true })
