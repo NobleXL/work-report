@@ -1,0 +1,50 @@
+-- 工作量日报系统 — Supabase PostgreSQL 表结构
+
+CREATE TABLE IF NOT EXISTS work_items (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  unit VARCHAR(50) NOT NULL DEFAULT '个',
+  points_per_unit NUMERIC(10,1) NOT NULL DEFAULT 0,
+  sort_order INT NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS daily_reports (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  report_date DATE NOT NULL,
+  area VARCHAR(255) NOT NULL,
+  group_leader VARCHAR(255) NOT NULL,
+  workers TEXT NOT NULL,
+  guardian VARCHAR(255) DEFAULT '',
+  description TEXT DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS report_work_items (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  report_id BIGINT NOT NULL REFERENCES daily_reports(id) ON DELETE CASCADE,
+  work_item_id BIGINT NOT NULL REFERENCES work_items(id),
+  quantity NUMERIC(10,1) NOT NULL DEFAULT 0
+);
+
+-- 企业微信通知配置表
+CREATE TABLE IF NOT EXISTS wechat_config (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  webhook_url TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 人员手机号映射表
+CREATE TABLE IF NOT EXISTS person_phone_map (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name VARCHAR(255) NOT NULL UNIQUE,
+  phone VARCHAR(50) NOT NULL
+);
+
+-- 插入默认工项
+INSERT INTO work_items (name, unit, points_per_unit, sort_order) VALUES
+  ('照明灯具安装', '个', 14.5, 1),
+  ('保护管安装', '米', 4.8, 2);
+
+
+
