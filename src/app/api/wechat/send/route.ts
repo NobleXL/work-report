@@ -1,19 +1,38 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-export async function POST(req: NextRequest) {
-  const { report_id } = await req.json()
+function todayStr() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const value = (type: string) => parts.find((part) => part.type === type)?.value || ''
+  return `${value('year')}-${value('month')}-${value('day')}`
+}
 
-  // Get report + work items
-  const { data: report, error: rErr } = await supabase
+function normalizeMobile(phone: string) {
+  return phone.replace(/[^\d]/g, '')
+}
+
+function formatNumber(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1)
+}
+
+export async function POST() {
+  const today = todayStr()
+
+  const { data: reports, error: rErr } = await supabase
     .from('daily_reports')
-    .select('*, report_work_items(quantity, work_items(name, unit, points_per_unit))')
-    .eq('id', report_id)
-    .single()
+    .select('id, report_date, area, report_work_items(quantity, work_items(name, unit, points_per_unit))')
+    .eq('report_date', today)
+    .order('area', { ascending: true })
+    .order('created_at', { ascending: true })
 
-  if (rErr || !report) return NextResponse.json({ error: '日报不存在' }, { status: 404 })
+  if (rErr) return NextResponse.json({ error: rErr.message }, { status: 500 })
+  if (!reports?.length) return NextResponse.json({ error: '今日暂无日报' }, { status: 404 })
 
-  // Get webhook + phone map
   const { data: config } = await supabase
     .from('wechat_config')
     .select('webhook_url')
@@ -25,36 +44,50 @@ export async function POST(req: NextRequest) {
 
   const { data: phones } = await supabase
     .from('person_phone_map')
-    .select('name, phone')
+    .select('phone')
 
-  const phoneMap: Record<string, string> = Object.fromEntries((phones || []).map((p: any) => [p.name, p.phone]))
+  const mentionedMobiles = Array.from(
+    new Set((phones || []).map((p: any) => normalizeMobile(String(p.phone || ''))).filter(Boolean))
+  )
 
-  // Build mention list from workers
-  const workerNames = report.workers.split(/[，,\s]+/).filter(Boolean)
-  const mentionedMobiles = workerNames
-    .map((n: string) => phoneMap[n.trim()])
-    .filter(Boolean)
+  const areaMap = new Map<string, Map<string, { name: string; unit: string; qty: number; rate: number }>>()
 
-  // Build content lines
-  const lines: string[] = [report.area]
-  for (const ri of report.report_work_items || []) {
-    const name = ri.work_items?.name || ''
-    const unit = ri.work_items?.unit || ''
-    const qty = Number(ri.quantity)
-    const rate = Number(ri.work_items?.points_per_unit ?? 0)
-    const subtotal = qty * rate
-    lines.push(`${name}${qty.toFixed(1)}${unit} 单个点数${rate.toFixed(1)} 总点数${subtotal.toFixed(1)}点`)
+  for (const report of reports) {
+    const area = report.area || '未填写区域'
+    if (!areaMap.has(area)) areaMap.set(area, new Map())
+    const itemMap = areaMap.get(area)!
+
+    for (const ri of report.report_work_items || []) {
+      const workItem = Array.isArray(ri.work_items) ? ri.work_items[0] : ri.work_items
+      const name = workItem?.name || ''
+      const unit = workItem?.unit || ''
+      const rate = Number(workItem?.points_per_unit ?? 0)
+      const key = `${name}|${unit}|${rate}`
+      const current = itemMap.get(key)
+      if (current) {
+        current.qty += Number(ri.quantity)
+      } else {
+        itemMap.set(key, { name, unit, qty: Number(ri.quantity), rate })
+      }
+    }
   }
 
-  const content = lines.join('\n')
+  const lines: string[] = [`${today} 今日工作量`]
+  for (const [area, itemMap] of areaMap) {
+    lines.push('', area)
+    for (const item of itemMap.values()) {
+      const subtotal = item.qty * item.rate
+      lines.push(`${item.name}${formatNumber(item.qty)}${item.unit} 单个点数${formatNumber(item.rate)} 总点数${formatNumber(subtotal)}点`)
+    }
+  }
 
-  // Build wecom message
-  const mentionedList = mentionedMobiles.length > 0 ? mentionedMobiles : undefined
+  const content = lines.join('\n').trim()
+
   const body: any = {
     msgtype: 'text',
     text: {
       content,
-      mentioned_mobile_list: mentionedList,
+      mentioned_mobile_list: mentionedMobiles.length ? mentionedMobiles : undefined,
     },
   }
 

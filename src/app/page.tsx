@@ -33,7 +33,7 @@ export default function HomePage() {
   const [reports, setReports] = useState<Report[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [sendingId, setSendingId] = useState<number | null>(null)
+  const [sendingToday, setSendingToday] = useState(false)
 
   useEffect(() => { loadData() }, [])
 
@@ -59,21 +59,20 @@ export default function HomePage() {
     } catch { toast.error('删除失败') }
   }
 
-  async function sendWechat(id: number) {
-    setSendingId(id)
+  async function sendTodayWechat() {
+    setSendingToday(true)
     try {
       const res = await fetch('/api/wechat/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ report_id: id }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '发送失败')
-      toast.success('通知已发送 ✅')
+      toast.success('今日工作量已发送')
     } catch (err: any) {
       toast.error(err.message)
     } finally {
-      setSendingId(null)
+      setSendingToday(false)
     }
   }
 
@@ -85,10 +84,15 @@ export default function HomePage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold">📋 日报</h1>
-        <Link href="/report">
-          <Button size="sm"><Plus className="h-4 w-4 mr-1" />填写</Button>
-        </Link>
+        <h1 className="text-xl font-bold">📋 今日日报</h1>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={sendTodayWechat} disabled={sendingToday || !reports.length}>
+            <Send className="h-4 w-4 mr-1" />{sendingToday ? '发送中…' : '发送今日'}
+          </Button>
+          <Link href="/report">
+            <Button size="sm"><Plus className="h-4 w-4 mr-1" />填写</Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats row */}
@@ -123,7 +127,7 @@ export default function HomePage() {
       {loading ? (
         <div className="text-center text-muted-foreground py-12">加载中…</div>
       ) : reports.length === 0 ? (
-        <div className="text-center text-muted-foreground py-12">暂无日报记录，点击「填写」开始</div>
+        <div className="text-center text-muted-foreground py-12">今日暂无日报记录，点击「填写」开始</div>
       ) : (
         <div className="space-y-3">
           {reports.map((r) => (
@@ -138,20 +142,9 @@ export default function HomePage() {
                   <Badge variant="secondary" className="text-base font-bold px-3 py-1">
                     {r.total_points.toFixed(1)} 点
                   </Badge>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-green-600"
-                      onClick={() => sendWechat(r.id)}
-                      disabled={sendingId === r.id}
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteReport(r.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteReport(r.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
                 {r.description && (
                   <div className="mt-2 text-sm text-muted-foreground bg-muted rounded p-2 whitespace-pre-wrap">
