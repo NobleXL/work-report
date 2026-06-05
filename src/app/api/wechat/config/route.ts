@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+interface PhoneEntry {
+  name: string
+  phone: string
+}
+
 export async function GET() {
   const { data: configs, error: configError } = await supabase
     .from('wechat_config')
@@ -23,7 +28,7 @@ export async function GET() {
 
   return NextResponse.json({
     webhook_url: configs?.webhook_url || '',
-    phone_map: Object.fromEntries((phones || []).map((p: any) => [p.name, p.phone])),
+    phone_map: Object.fromEntries(((phones || []) as PhoneEntry[]).map((p) => [p.name, p.phone])),
   })
 }
 

@@ -1,11 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from '@/components/ui/table'
@@ -14,10 +13,29 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 import * as XLSX from 'xlsx'
 
+type ExportRow = {
+  日期: string
+  区域: string
+  工项: string
+  数量: number
+  单位: string
+  单价: number
+  小计: number
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : '未知错误'
+}
+
+function getInitialDateRange() {
+  if (typeof window === 'undefined') return { from: '', to: '' }
+  const params = new URLSearchParams(window.location.search)
+  return { from: params.get('from') || '', to: params.get('to') || '' }
+}
+
 interface SummaryRow {
   report_date: string
   area: string
-  group_leader: string
   work_item_id: number
   item_name: string
   unit: string
@@ -28,19 +46,10 @@ interface SummaryRow {
 export default function SummaryPage() {
   const [rows, setRows] = useState<SummaryRow[]>([])
   const [loading, setLoading] = useState(false)
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
+  const [from, setFrom] = useState(() => getInitialDateRange().from)
+  const [to, setTo] = useState(() => getInitialDateRange().to)
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('from')) setFrom(params.get('from')!)
-    if (params.get('to')) setTo(params.get('to')!)
-    const f = params.get('from') || ''
-    const t = params.get('to') || ''
-    if (f || t) loadSummary(f, t)
-  }, [])
-
-  async function loadSummary(f?: string, t?: string) {
+  const loadSummary = useCallback(async (f?: string, t?: string) => {
     const fromVal = f ?? from
     const toVal = t ?? to
     setLoading(true)
@@ -56,22 +65,28 @@ export default function SummaryPage() {
     try {
       const res = await fetch(url)
       setRows(await res.json())
-    } catch (err: any) {
-      toast.error('加载失败: ' + err.message)
+    } catch (err: unknown) {
+      toast.error('加载失败: ' + getErrorMessage(err))
     } finally {
       setLoading(false)
     }
-  }
+  }, [from, to])
+
+  useEffect(() => {
+    const initialRange = getInitialDateRange()
+    if (initialRange.from || initialRange.to) {
+      queueMicrotask(() => { void loadSummary(initialRange.from, initialRange.to) })
+    }
+  }, [loadSummary])
 
   const grandTotal = rows.reduce((s, r) => s + r.total_qty * r.points_per_unit, 0)
 
   function exportExcel() {
     if (!rows.length) { toast.error('暂无数据'); return }
 
-    const data = rows.map((r) => ({
+    const data: ExportRow[] = rows.map((r) => ({
       日期: r.report_date,
       区域: r.area,
-      组长: r.group_leader,
       工项: r.item_name,
       数量: r.total_qty,
       单位: r.unit,
@@ -83,7 +98,6 @@ export default function SummaryPage() {
     data.push({
       日期: '',
       区域: '',
-      组长: '',
       工项: '合计',
       数量: 0,
       单位: '',
@@ -97,7 +111,7 @@ export default function SummaryPage() {
 
     // Auto column width
     const colWidths = Object.keys(data[0]).map((key) => ({
-      wch: Math.max(key.length * 2, ...data.map((d) => String((d as any)[key]).length + 2)),
+      wch: Math.max(key.length * 2, ...data.map((d) => String(d[key as keyof ExportRow]).length + 2)),
     }))
     ws['!cols'] = colWidths
 
@@ -164,7 +178,6 @@ export default function SummaryPage() {
                   <TableRow>
                     <TableHead>日期</TableHead>
                     <TableHead>区域</TableHead>
-                    <TableHead>组长</TableHead>
                     <TableHead>工项</TableHead>
                     <TableHead className="text-right">数量</TableHead>
                     <TableHead>单位</TableHead>
@@ -179,7 +192,6 @@ export default function SummaryPage() {
                       <TableRow key={idx}>
                         <TableCell>{r.report_date}</TableCell>
                         <TableCell>{r.area}</TableCell>
-                        <TableCell>{r.group_leader}</TableCell>
                         <TableCell>{r.item_name}</TableCell>
                         <TableCell className="text-right tabular-nums">{r.total_qty.toFixed(1)}</TableCell>
                         <TableCell>{r.unit}</TableCell>
@@ -191,7 +203,7 @@ export default function SummaryPage() {
                 </TableBody>
                 <TableFooter>
                   <TableRow>
-                    <TableCell colSpan={7} className="text-right font-bold">总计</TableCell>
+                    <TableCell colSpan={6} className="text-right font-bold">总计</TableCell>
                     <TableCell className="text-right tabular-nums font-bold text-primary">{grandTotal.toFixed(1)}</TableCell>
                   </TableRow>
                 </TableFooter>

@@ -1,27 +1,27 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Trash2, MapPin, User, Calendar, Send } from 'lucide-react'
+import { Plus, Trash2, MapPin, Calendar, Send } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Report {
   id: number
   report_date: string
-  area: string
-  group_leader: string
-  workers: string
-  guardian: string
-  description: string
+  areas: string[]
   total_points: number
 }
 
 interface Stats {
   daily: { report_date: string; report_count: number; total_points: number }[]
   by_area: { area: string; report_count: number; total_points: number }[]
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : '未知错误'
 }
 
 function todayStr() {
@@ -35,20 +35,22 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [sendingToday, setSendingToday] = useState(false)
 
-  useEffect(() => { loadData() }, [])
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true)
     try {
       const [rRes, sRes] = await Promise.all([fetch('/api/reports'), fetch('/api/stats')])
       setReports(await rRes.json())
       setStats(await sRes.json())
-    } catch (err: any) {
-      toast.error('加载失败: ' + err.message)
+    } catch (err: unknown) {
+      toast.error('加载失败: ' + getErrorMessage(err))
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    queueMicrotask(() => { void loadData() })
+  }, [loadData])
 
   async function deleteReport(id: number) {
     if (!confirm('确认删除这条日报？')) return
@@ -69,8 +71,8 @@ export default function HomePage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '发送失败')
       toast.success('今日工作量已发送')
-    } catch (err: any) {
-      toast.error(err.message)
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err))
     } finally {
       setSendingToday(false)
     }
@@ -135,8 +137,7 @@ export default function HomePage() {
               <CardContent className="p-4">
                 <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-2">
                   <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{r.report_date}</span>
-                  <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{r.area}</span>
-                  <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" />{r.group_leader}</span>
+                  <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{r.areas.join('、') || '未填写区域'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <Badge variant="secondary" className="text-base font-bold px-3 py-1">
@@ -146,11 +147,6 @@ export default function HomePage() {
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-                {r.description && (
-                  <div className="mt-2 text-sm text-muted-foreground bg-muted rounded p-2 whitespace-pre-wrap">
-                    {r.description}
-                  </div>
-                )}
               </CardContent>
             </Card>
           ))}

@@ -10,12 +10,8 @@ export interface WorkItem {
 export interface DailyReport {
   id: number
   report_date: string
-  area: string
-  group_leader: string
-  workers: string
-  guardian: string
-  description: string
   created_at: string
+  areas?: string[]
   total_points?: number
   work_items?: ReportWorkItem[]
 }
@@ -24,6 +20,7 @@ export interface ReportWorkItem {
   id: number
   report_id: number
   work_item_id: number
+  area: string
   quantity: number
   item_name?: string
   unit?: string
@@ -33,7 +30,6 @@ export interface ReportWorkItem {
 export interface SummaryRow {
   report_date: string
   area: string
-  group_leader: string
   work_item_id: number
   item_name: string
   unit: string

@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-function calcTotal(reportWorkItems: any[]) {
-  return (reportWorkItems || []).reduce((sum: number, ri: any) => {
-    const ppus = ri.work_items as any
+interface WorkItemRef {
+  points_per_unit?: number | string | null
+}
+
+interface ReportWorkItemRef {
+  quantity: number | string
+  work_items?: WorkItemRef | WorkItemRef[] | null
+}
+
+function calcTotal(reportWorkItems: ReportWorkItemRef[]) {
+  return (reportWorkItems || []).reduce((sum, ri) => {
+    const ppus = ri.work_items
     const ppu = Array.isArray(ppus) ? ppus[0]?.points_per_unit : ppus?.points_per_unit
     return sum + Number(ri.quantity) * Number(ppu ?? 0)
   }, 0)

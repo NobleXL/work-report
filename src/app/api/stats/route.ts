@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+interface WorkItemRef {
+  points_per_unit?: number | string | null
+}
+
+interface ReportWorkItemRef {
+  area?: string | null
+  quantity: number | string
+  work_items?: WorkItemRef | WorkItemRef[] | null
+}
+
 export async function GET() {
   // Daily stats: last 30 days
   const { data: daily } = await supabase
@@ -15,9 +25,10 @@ export async function GET() {
     if (!dailyStats[key]) dailyStats[key] = { report_count: 0, total_points: 0 }
     dailyStats[key].report_count += 1
     for (const ri of (r.report_work_items || [])) {
-      const ppus = ri.work_items as any
+      const item = ri as ReportWorkItemRef
+      const ppus = item.work_items
       const ppu = Array.isArray(ppus) ? ppus[0]?.points_per_unit : ppus?.points_per_unit
-      dailyStats[key].total_points += Number(ri.quantity) * Number(ppu ?? 0)
+      dailyStats[key].total_points += Number(item.quantity) * Number(ppu ?? 0)
     }
   }
 
@@ -29,16 +40,18 @@ export async function GET() {
   // Area stats
   const { data: areaData } = await supabase
     .from('daily_reports')
-    .select('id, area, report_work_items(quantity, work_items(points_per_unit))')
+    .select('id, report_work_items(area, quantity, work_items(points_per_unit))')
 
   const areaStats: Record<string, { report_count: number; total_points: number }> = {}
   for (const r of (areaData || [])) {
-    if (!areaStats[r.area]) areaStats[r.area] = { report_count: 0, total_points: 0 }
-    areaStats[r.area].report_count += 1
     for (const ri of (r.report_work_items || [])) {
-      const ppus = ri.work_items as any
+      const area = ri.area || '未填写区域'
+      if (!areaStats[area]) areaStats[area] = { report_count: 0, total_points: 0 }
+      areaStats[area].report_count += 1
+      const item = ri as ReportWorkItemRef
+      const ppus = item.work_items
       const ppu = Array.isArray(ppus) ? ppus[0]?.points_per_unit : ppus?.points_per_unit
-      areaStats[r.area].total_points += Number(ri.quantity) * Number(ppu ?? 0)
+      areaStats[area].total_points += Number(item.quantity) * Number(ppu ?? 0)
     }
   }
 

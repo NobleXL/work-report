@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
 import { ArrowLeft, Plus, X, Save } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -15,10 +14,13 @@ interface PhoneEntry {
   phone: string
 }
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : '未知错误'
+}
+
 export default function SettingsPage() {
   const [webhookUrl, setWebhookUrl] = useState('')
   const [phoneEntries, setPhoneEntries] = useState<PhoneEntry[]>([{ name: '', phone: '' }])
-  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -31,7 +33,6 @@ export default function SettingsPage() {
         if (entries.length) setPhoneEntries(entries)
       })
       .catch(() => toast.error('加载配置失败'))
-      .finally(() => setLoading(false))
   }, [])
 
   function addEntry() {
@@ -67,8 +68,8 @@ export default function SettingsPage() {
       })
       if (!res.ok) throw new Error('保存失败')
       toast.success('配置已保存')
-    } catch (err: any) {
-      toast.error('保存失败: ' + err.message)
+    } catch (err: unknown) {
+      toast.error('保存失败: ' + getErrorMessage(err))
     } finally {
       setSaving(false)
     }
@@ -106,7 +107,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="p-4 pt-2 space-y-3">
           <p className="text-xs text-muted-foreground">
-            添加作业人员姓名和对应手机号，发送通知时会根据日报中的作业人员 @ 对应的人
+            添加需要在通知中提醒的人员姓名和手机号，发送通知时会 @ 已配置手机号
           </p>
 
           {phoneEntries.map((entry, idx) => (
