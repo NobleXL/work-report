@@ -1,20 +1,20 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-interface WorkItemRef {
+interface SubItemRef {
   points_per_unit?: number | string | null
 }
 
-interface ReportWorkItemRef {
+interface ReportSubItemRef {
   quantity: number | string
-  work_items?: WorkItemRef | WorkItemRef[] | null
+  sub_items?: SubItemRef | SubItemRef[] | null
 }
 
 export async function GET() {
   // Daily stats: last 30 days
   const { data: daily } = await supabase
     .from('daily_reports')
-    .select('id, report_date, report_work_items(quantity, work_items(points_per_unit))')
+    .select('id, report_date, report_sub_items(quantity, sub_items(points_per_unit))')
     .order('report_date', { ascending: false })
     .limit(500)
 
@@ -23,9 +23,9 @@ export async function GET() {
     const key = r.report_date
     if (!dailyStats[key]) dailyStats[key] = { report_count: 0, total_points: 0 }
     dailyStats[key].report_count += 1
-    for (const ri of (r.report_work_items || [])) {
-      const item = ri as ReportWorkItemRef
-      const ppus = item.work_items
+    for (const ri of (r.report_sub_items || [])) {
+      const item = ri as ReportSubItemRef
+      const ppus = item.sub_items
       const ppu = Array.isArray(ppus) ? ppus[0]?.points_per_unit : ppus?.points_per_unit
       dailyStats[key].total_points += Number(item.quantity) * Number(ppu ?? 0)
     }
@@ -36,27 +36,27 @@ export async function GET() {
     .sort((a, b) => b.report_date.localeCompare(a.report_date))
     .slice(0, 30)
 
-  // Area stats
-  const { data: areaData } = await supabase
+  // ConstructionArea stats
+  const { data: construction_areaData } = await supabase
     .from('daily_reports')
-    .select('id, area, report_work_items(quantity, work_items(points_per_unit))')
+    .select('id, construction_area, report_sub_items(quantity, sub_items(points_per_unit))')
 
-  const areaStats: Record<string, { report_count: number; total_points: number }> = {}
-  for (const r of (areaData || [])) {
-    const area = r.area || '未填写区域'
-    if (!areaStats[area]) areaStats[area] = { report_count: 0, total_points: 0 }
-    areaStats[area].report_count += 1
-    for (const ri of (r.report_work_items || [])) {
-      const item = ri as ReportWorkItemRef
-      const ppus = item.work_items
+  const construction_areaStats: Record<string, { report_count: number; total_points: number }> = {}
+  for (const r of (construction_areaData || [])) {
+    const construction_area = r.construction_area || '未填写区域'
+    if (!construction_areaStats[construction_area]) construction_areaStats[construction_area] = { report_count: 0, total_points: 0 }
+    construction_areaStats[construction_area].report_count += 1
+    for (const ri of (r.report_sub_items || [])) {
+      const item = ri as ReportSubItemRef
+      const ppus = item.sub_items
       const ppu = Array.isArray(ppus) ? ppus[0]?.points_per_unit : ppus?.points_per_unit
-      areaStats[area].total_points += Number(item.quantity) * Number(ppu ?? 0)
+      construction_areaStats[construction_area].total_points += Number(item.quantity) * Number(ppu ?? 0)
     }
   }
 
-  const byArea = Object.entries(areaStats)
-    .map(([area, v]) => ({ area, ...v }))
+  const byConstructionArea = Object.entries(construction_areaStats)
+    .map(([construction_area, v]) => ({ construction_area, ...v }))
     .sort((a, b) => b.total_points - a.total_points)
 
-  return NextResponse.json({ daily: dailyArr, by_area: byArea })
+  return NextResponse.json({ daily: dailyArr, by_construction_area: byConstructionArea })
 }

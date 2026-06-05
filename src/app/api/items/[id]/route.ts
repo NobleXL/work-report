@@ -7,7 +7,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { name, unit, points_per_unit } = body
 
   const { error } = await supabase
-    .from('work_items')
+    .from('sub_items')
     .update({ name, unit, points_per_unit })
     .eq('id', id)
 
@@ -19,14 +19,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params
   // toggle active
   const { data: item } = await supabase
-    .from('work_items')
+    .from('sub_items')
     .select('is_active')
     .eq('id', id)
     .single()
 
   const newVal = !(item?.is_active ?? true)
   const { error } = await supabase
-    .from('work_items')
+    .from('sub_items')
     .update({ is_active: newVal })
     .eq('id', id)
 

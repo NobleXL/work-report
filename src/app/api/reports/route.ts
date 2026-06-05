@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-interface WorkItemRef {
+interface SubItemRef {
   points_per_unit?: number | string | null
 }
 
-interface ReportWorkItemRef {
+interface ReportSubItemRef {
   quantity: number | string
-  work_items?: WorkItemRef | WorkItemRef[] | null
+  sub_items?: SubItemRef | SubItemRef[] | null
 }
 
-function calcTotal(reportWorkItems: ReportWorkItemRef[]) {
-  return (reportWorkItems || []).reduce((sum, ri) => {
-    const ppus = ri.work_items
+function calcTotal(reportSubItems: ReportSubItemRef[]) {
+  return (reportSubItems || []).reduce((sum, ri) => {
+    const ppus = ri.sub_items
     const ppu = Array.isArray(ppus) ? ppus[0]?.points_per_unit : ppus?.points_per_unit
     return sum + Number(ri.quantity) * Number(ppu ?? 0)
   }, 0)
@@ -32,7 +32,7 @@ function todayStr() {
 export async function GET() {
   const { data, error } = await supabase
     .from('daily_reports')
-    .select('*, report_work_items(*, work_items(name, unit, points_per_unit))')
+    .select('*, report_sub_items(*, sub_items(name, unit, points_per_unit))')
     .eq('report_date', todayStr())
     .order('report_date', { ascending: false })
     .order('created_at', { ascending: false })
@@ -40,10 +40,10 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const reports = (data || []).map((r) => {
-    const reportWorkItems = (r.report_work_items || []) as ReportWorkItemRef[]
+    const reportSubItems = (r.report_sub_items || []) as ReportSubItemRef[]
     return {
       ...r,
-      total_points: calcTotal(reportWorkItems),
+      total_points: calcTotal(reportSubItems),
     }
   })
 
@@ -52,24 +52,24 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { report_date, area, work_items } = body
+  const { report_date, construction_area, sub_items } = body
 
   const { data: report, error: rErr } = await supabase
     .from('daily_reports')
-    .insert({ report_date, area })
+    .insert({ report_date, construction_area })
     .select()
     .single()
 
   if (rErr) return NextResponse.json({ error: rErr.message }, { status: 500 })
 
   const rid = report.id
-  const rows = (work_items as { item_id: number; quantity: number }[]).map((w) => ({
+  const rows = (sub_items as { sub_item_id: number; quantity: number }[]).map((w) => ({
     report_id: rid,
-    work_item_id: w.item_id,
+    sub_item_id: w.sub_item_id,
     quantity: w.quantity,
   }))
 
-  const { error: wiErr } = await supabase.from('report_work_items').insert(rows)
+  const { error: wiErr } = await supabase.from('report_sub_items').insert(rows)
   if (wiErr) return NextResponse.json({ error: wiErr.message }, { status: 500 })
 
   return NextResponse.json({ ok: true, id: rid }, { status: 201 })

@@ -11,13 +11,13 @@ import { toast } from 'sonner'
 interface Report {
   id: number
   report_date: string
-  area: string
+  construction_area: string
   total_points: number
 }
 
 interface Stats {
   daily: { report_date: string; report_count: number; total_points: number }[]
-  by_area: { area: string; report_count: number; total_points: number }[]
+  by_construction_area: { construction_area: string; report_count: number; total_points: number }[]
 }
 
 function getErrorMessage(error: unknown) {
@@ -137,7 +137,7 @@ export default function HomePage() {
               <CardContent className="p-4">
                 <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-2">
                   <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{r.report_date}</span>
-                  <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{r.area || '未填写区域'}</span>
+                  <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{r.construction_area || '未填写区域'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <Badge variant="secondary" className="text-base font-bold px-3 py-1">

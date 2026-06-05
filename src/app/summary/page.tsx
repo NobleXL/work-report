@@ -16,7 +16,7 @@ import * as XLSX from 'xlsx'
 type ExportRow = {
   日期: string
   区域: string
-  工项: string
+  子项: string
   数量: number
   单位: string
   单价: number
@@ -35,8 +35,8 @@ function getInitialDateRange() {
 
 interface SummaryRow {
   report_date: string
-  area: string
-  work_item_id: number
+  construction_area: string
+  sub_item_id: number
   item_name: string
   unit: string
   total_qty: number
@@ -86,8 +86,8 @@ export default function SummaryPage() {
 
     const data: ExportRow[] = rows.map((r) => ({
       日期: r.report_date,
-      区域: r.area,
-      工项: r.item_name,
+      区域: r.construction_area,
+      子项: r.item_name,
       数量: r.total_qty,
       单位: r.unit,
       单价: r.points_per_unit,
@@ -98,7 +98,7 @@ export default function SummaryPage() {
     data.push({
       日期: '',
       区域: '',
-      工项: '合计',
+      子项: '合计',
       数量: 0,
       单位: '',
       单价: 0,
@@ -178,7 +178,7 @@ export default function SummaryPage() {
                   <TableRow>
                     <TableHead>日期</TableHead>
                     <TableHead>区域</TableHead>
-                    <TableHead>工项</TableHead>
+                    <TableHead>子项</TableHead>
                     <TableHead className="text-right">数量</TableHead>
                     <TableHead>单位</TableHead>
                     <TableHead className="text-right">单价</TableHead>
@@ -191,7 +191,7 @@ export default function SummaryPage() {
                     return (
                       <TableRow key={idx}>
                         <TableCell>{r.report_date}</TableCell>
-                        <TableCell>{r.area}</TableCell>
+                        <TableCell>{r.construction_area}</TableCell>
                         <TableCell>{r.item_name}</TableCell>
                         <TableCell className="text-right tabular-nums">{r.total_qty.toFixed(1)}</TableCell>
                         <TableCell>{r.unit}</TableCell>

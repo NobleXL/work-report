@@ -5,15 +5,15 @@ interface PhoneEntry {
   phone?: string | null
 }
 
-interface WorkItemRef {
+interface SubItemRef {
   name?: string | null
   unit?: string | null
   points_per_unit?: number | string | null
 }
 
-interface ReportWorkItemRef {
+interface ReportSubItemRef {
   quantity: number | string
-  work_items?: WorkItemRef | WorkItemRef[] | null
+  sub_items?: SubItemRef | SubItemRef[] | null
 }
 
 function todayStr() {
@@ -40,9 +40,9 @@ export async function POST() {
 
   const { data: reports, error: rErr } = await supabase
     .from('daily_reports')
-    .select('id, report_date, area, report_work_items(quantity, work_items(name, unit, points_per_unit))')
+    .select('id, report_date, construction_area, report_sub_items(quantity, sub_items(name, unit, points_per_unit))')
     .eq('report_date', today)
-    .order('area', { ascending: true })
+    .order('construction_area', { ascending: true })
     .order('created_at', { ascending: true })
 
   if (rErr) return NextResponse.json({ error: rErr.message }, { status: 500 })
@@ -65,18 +65,18 @@ export async function POST() {
     new Set((phones || []).map((p: PhoneEntry) => normalizeMobile(String(p.phone || ''))).filter(Boolean))
   )
 
-  const areaMap = new Map<string, Map<string, { name: string; unit: string; qty: number; rate: number }>>()
+  const construction_areaMap = new Map<string, Map<string, { name: string; unit: string; qty: number; rate: number }>>()
 
   for (const report of reports) {
-    const area = report.area || '未填写区域'
-    if (!areaMap.has(area)) areaMap.set(area, new Map())
-    const itemMap = areaMap.get(area)!
+    const construction_area = report.construction_area || '未填写区域'
+    if (!construction_areaMap.has(construction_area)) construction_areaMap.set(construction_area, new Map())
+    const itemMap = construction_areaMap.get(construction_area)!
 
-    for (const ri of ((report.report_work_items || []) as ReportWorkItemRef[])) {
-      const workItem = Array.isArray(ri.work_items) ? ri.work_items[0] : ri.work_items
-      const name = workItem?.name || ''
-      const unit = workItem?.unit || ''
-      const rate = Number(workItem?.points_per_unit ?? 0)
+    for (const ri of ((report.report_sub_items || []) as ReportSubItemRef[])) {
+      const subItem = Array.isArray(ri.sub_items) ? ri.sub_items[0] : ri.sub_items
+      const name = subItem?.name || ''
+      const unit = subItem?.unit || ''
+      const rate = Number(subItem?.points_per_unit ?? 0)
       const key = `${name}|${unit}|${rate}`
       const current = itemMap.get(key)
       if (current) {
@@ -88,8 +88,8 @@ export async function POST() {
   }
 
   const lines: string[] = [`${today} 今日工作量`]
-  for (const [area, itemMap] of areaMap) {
-    lines.push('', area)
+  for (const [construction_area, itemMap] of construction_areaMap) {
+    lines.push('', construction_area)
     for (const item of itemMap.values()) {
       const subtotal = item.qty * item.rate
       lines.push(`${item.name}${formatNumber(item.qty)}${item.unit} 单个点数${formatNumber(item.rate)} 总点数${formatNumber(subtotal)}点`)

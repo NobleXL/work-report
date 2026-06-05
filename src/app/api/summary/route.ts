@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-interface WorkItemRef {
+interface SubItemRef {
   name?: string | null
   unit?: string | null
   points_per_unit?: number | string | null
@@ -9,13 +9,13 @@ interface WorkItemRef {
 
 interface DailyReportRef {
   report_date?: string | null
-  area?: string | null
+  construction_area?: string | null
 }
 
 interface SummaryItemRef {
   quantity: number | string
-  work_item_id: number
-  work_items?: WorkItemRef | WorkItemRef[] | null
+  sub_item_id: number
+  sub_items?: SubItemRef | SubItemRef[] | null
   daily_reports?: DailyReportRef | DailyReportRef[] | null
 }
 
@@ -35,8 +35,8 @@ export async function GET(req: NextRequest) {
   }
 
   let query = supabase
-    .from('report_work_items')
-    .select('report_id, quantity, work_item_id, work_items(name, unit, points_per_unit), daily_reports!inner(report_date, area)')
+    .from('report_sub_items')
+    .select('report_id, quantity, sub_item_id, sub_items(name, unit, points_per_unit), daily_reports!inner(report_date, construction_area)')
 
   if (reportIds) {
     query = query.in('report_id', reportIds)
@@ -46,13 +46,13 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const rows = ((data || []) as SummaryItemRef[]).map((ri) => {
-    const ppus = ri.work_items
+    const ppus = ri.sub_items
     const wi = Array.isArray(ppus) ? ppus[0] : ppus
     const dr = Array.isArray(ri.daily_reports) ? ri.daily_reports[0] : ri.daily_reports
     return {
       report_date: dr?.report_date || '',
-      area: dr?.area || '',
-      work_item_id: ri.work_item_id,
+      construction_area: dr?.construction_area || '',
+      sub_item_id: ri.sub_item_id,
       item_name: wi?.name || '',
       unit: wi?.unit || '',
       total_qty: Number(ri.quantity),

@@ -12,7 +12,7 @@ import { Plus, X, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 
-interface WorkItem {
+interface SubItem {
   id: number
   name: string
   unit: string
@@ -39,7 +39,7 @@ function todayStr() {
 
 export default function ReportPage() {
   const router = useRouter()
-  const [items, setItems] = useState<WorkItem[]>([])
+  const [items, setItems] = useState<SubItem[]>([])
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([])
   const [selectedId, setSelectedId] = useState('')
   const [qty, setQty] = useState('')
@@ -48,14 +48,14 @@ export default function ReportPage() {
   const dateRef = todayStr()
   const [form, setForm] = useState({
     report_date: dateRef,
-    area: '',
+    construction_area: '',
   })
 
   useEffect(() => {
     fetch('/api/items')
       .then((r) => r.json())
       .then(setItems)
-      .catch(() => toast.error('加载工项失败'))
+      .catch(() => toast.error('加载子项失败'))
   }, [])
 
   const activeItems = items.filter((i) => i.is_active)
@@ -63,7 +63,7 @@ export default function ReportPage() {
   function addItem() {
     const id = parseInt(selectedId)
     const q = parseFloat(qty)
-    if (!id) { toast.error('请选择工项'); return }
+    if (!id) { toast.error('请选择子项'); return }
     if (!q || q <= 0) { toast.error('请输入有效数量'); return }
 
     const item = items.find((i) => i.id === id)
@@ -89,16 +89,16 @@ export default function ReportPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const trimmedArea = form.area.trim()
-    if (!trimmedArea) { toast.error('请输入施工区域'); return }
-    if (!selectedItems.length) { toast.error('请至少添加一个工分项'); return }
+    const trimmedConstructionArea = form.construction_area.trim()
+    if (!trimmedConstructionArea) { toast.error('请输入施工区域'); return }
+    if (!selectedItems.length) { toast.error('请至少添加一个子项'); return }
 
     setSubmitting(true)
     try {
       const body = {
         ...form,
-        area: trimmedArea,
-        work_items: selectedItems.map((s) => ({ item_id: s.id, quantity: s.quantity })),
+        construction_area: trimmedConstructionArea,
+        sub_items: selectedItems.map((s) => ({ sub_item_id: s.id, quantity: s.quantity })),
       }
       const res = await fetch('/api/reports', {
         method: 'POST',
@@ -132,7 +132,7 @@ export default function ReportPage() {
               </div>
               <div>
                 <Label>施工区域</Label>
-                <Input placeholder="如 中压配电室" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} required />
+                <Input placeholder="如 中压配电室" value={form.construction_area} onChange={(e) => setForm({ ...form, construction_area: e.target.value })} required />
               </div>
             </div>
           </CardContent>
@@ -140,19 +140,19 @@ export default function ReportPage() {
 
         <Card className="mb-4">
           <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-base">工分项</CardTitle>
+            <CardTitle className="text-base">子项</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-2">
-            {/* Add work item row */}
+            {/* Add sub item row */}
             <div className="flex gap-2 items-end flex-wrap mb-3">
               <div className="flex-1 min-w-[160px]">
-                <Label className="text-xs">选择工项</Label>
+                <Label className="text-xs">选择子项</Label>
                 <select
                   className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                   value={selectedId}
                   onChange={(e) => setSelectedId(e.target.value)}
                 >
-                  <option value="">— 选择工项 —</option>
+                  <option value="">— 选择子项 —</option>
                   {activeItems.map((i) => (
                     <option key={i.id} value={i.id}>
                       {i.name} ({i.unit} · {i.points_per_unit.toFixed(1)}分)
@@ -172,7 +172,7 @@ export default function ReportPage() {
             {/* Selected items list */}
             {selectedItems.length === 0 ? (
               <div className="text-center text-sm text-muted-foreground py-6 border border-dashed rounded-md">
-                请从上方选择工项并添加
+                请从上方选择子项并添加
               </div>
             ) : (
               <div className="space-y-2">
