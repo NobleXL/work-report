@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-function calcTotal(reportWorkItems: any[]) {
-  return (reportWorkItems || []).reduce((sum: number, ri: any) => {
-    const ppus = ri.work_items as any
+interface WorkItemRef {
+  points_per_unit?: number | string | null
+}
+
+interface ReportWorkItemRef {
+  quantity: number | string
+  work_items?: WorkItemRef | WorkItemRef[] | null
+}
+
+function calcTotal(reportWorkItems: ReportWorkItemRef[]) {
+  return (reportWorkItems || []).reduce((sum, ri) => {
+    const ppus = ri.work_items
     const ppu = Array.isArray(ppus) ? ppus[0]?.points_per_unit : ppus?.points_per_unit
     return sum + Number(ri.quantity) * Number(ppu ?? 0)
   }, 0)
@@ -30,9 +39,9 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const reports = (data || []).map((r: any) => ({
+  const reports = (data || []).map((r) => ({
     ...r,
-    total_points: calcTotal(r.report_work_items),
+    total_points: calcTotal((r.report_work_items || []) as ReportWorkItemRef[]),
   }))
 
   return NextResponse.json(reports)
@@ -51,7 +60,7 @@ export async function POST(req: NextRequest) {
   if (rErr) return NextResponse.json({ error: rErr.message }, { status: 500 })
 
   const rid = report.id
-  const rows = work_items.map((w: any) => ({
+  const rows = (work_items as { item_id: number; quantity: number }[]).map((w) => ({
     report_id: rid,
     work_item_id: w.item_id,
     quantity: w.quantity,
