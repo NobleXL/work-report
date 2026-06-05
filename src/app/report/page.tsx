@@ -25,7 +25,6 @@ interface SelectedItem {
   name: string
   unit: string
   points_per_unit: number
-  area: string
   quantity: number
 }
 
@@ -43,13 +42,13 @@ export default function ReportPage() {
   const [items, setItems] = useState<WorkItem[]>([])
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([])
   const [selectedId, setSelectedId] = useState('')
-  const [area, setArea] = useState('')
   const [qty, setQty] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const dateRef = todayStr()
   const [form, setForm] = useState({
     report_date: dateRef,
+    area: '',
   })
 
   useEffect(() => {
@@ -64,20 +63,18 @@ export default function ReportPage() {
   function addItem() {
     const id = parseInt(selectedId)
     const q = parseFloat(qty)
-    const trimmedArea = area.trim()
     if (!id) { toast.error('请选择工项'); return }
-    if (!trimmedArea) { toast.error('请输入施工区域'); return }
     if (!q || q <= 0) { toast.error('请输入有效数量'); return }
 
     const item = items.find((i) => i.id === id)
     if (!item) return
 
     setSelectedItems((prev) => {
-      const existing = prev.find((s) => s.id === id && s.area === trimmedArea)
+      const existing = prev.find((s) => s.id === id)
       if (existing) {
-        return prev.map((s) => s.id === id && s.area === trimmedArea ? { ...s, quantity: s.quantity + q } : s)
+        return prev.map((s) => s.id === id ? { ...s, quantity: s.quantity + q } : s)
       }
-      return [...prev, { id: item.id, name: item.name, unit: item.unit, points_per_unit: item.points_per_unit, area: trimmedArea, quantity: q }]
+      return [...prev, { id: item.id, name: item.name, unit: item.unit, points_per_unit: item.points_per_unit, quantity: q }]
     })
     setQty('')
     setSelectedId('')
@@ -92,13 +89,16 @@ export default function ReportPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    const trimmedArea = form.area.trim()
+    if (!trimmedArea) { toast.error('请输入施工区域'); return }
     if (!selectedItems.length) { toast.error('请至少添加一个工分项'); return }
 
     setSubmitting(true)
     try {
       const body = {
         ...form,
-        work_items: selectedItems.map((s) => ({ item_id: s.id, area: s.area, quantity: s.quantity })),
+        area: trimmedArea,
+        work_items: selectedItems.map((s) => ({ item_id: s.id, quantity: s.quantity })),
       }
       const res = await fetch('/api/reports', {
         method: 'POST',
@@ -125,9 +125,15 @@ export default function ReportPage() {
       <form onSubmit={handleSubmit}>
         <Card className="mb-4">
           <CardContent className="p-4">
-            <div>
-              <Label>日期</Label>
-              <Input type="date" value={form.report_date} onChange={(e) => setForm({ ...form, report_date: e.target.value })} required />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>日期</Label>
+                <Input type="date" value={form.report_date} onChange={(e) => setForm({ ...form, report_date: e.target.value })} required />
+              </div>
+              <div>
+                <Label>施工区域</Label>
+                <Input placeholder="如 中压配电室" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} required />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -154,10 +160,6 @@ export default function ReportPage() {
                   ))}
                 </select>
               </div>
-              <div className="flex-1 min-w-[150px]">
-                <Label className="text-xs">施工区域</Label>
-                <Input placeholder="如 2BDG2A 1-3" value={area} onChange={(e) => setArea(e.target.value)} />
-              </div>
               <div className="w-24">
                 <Label className="text-xs">数量</Label>
                 <Input type="number" step="0.1" min="0" value={qty} onChange={(e) => setQty(e.target.value)} />
@@ -178,10 +180,7 @@ export default function ReportPage() {
                   const sub = s.quantity * s.points_per_unit
                   return (
                     <div key={idx} className="flex items-center gap-2 p-2 bg-muted rounded-md text-sm">
-                      <div className="font-medium flex-1 min-w-0">
-                        <div>{s.name}</div>
-                        <div className="text-xs text-muted-foreground truncate">{s.area}</div>
-                      </div>
+                      <span className="font-medium flex-1">{s.name}</span>
                       <span className="text-muted-foreground">
                         {s.quantity.toFixed(1)} {s.unit} × {s.points_per_unit.toFixed(1)}
                       </span>

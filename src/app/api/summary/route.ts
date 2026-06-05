@@ -9,10 +9,10 @@ interface WorkItemRef {
 
 interface DailyReportRef {
   report_date?: string | null
+  area?: string | null
 }
 
 interface SummaryItemRef {
-  area?: string | null
   quantity: number | string
   work_item_id: number
   work_items?: WorkItemRef | WorkItemRef[] | null
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('report_work_items')
-    .select('report_id, area, quantity, work_item_id, work_items(name, unit, points_per_unit), daily_reports!inner(report_date)')
+    .select('report_id, quantity, work_item_id, work_items(name, unit, points_per_unit), daily_reports!inner(report_date, area)')
 
   if (reportIds) {
     query = query.in('report_id', reportIds)
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     const dr = Array.isArray(ri.daily_reports) ? ri.daily_reports[0] : ri.daily_reports
     return {
       report_date: dr?.report_date || '',
-      area: ri.area || '',
+      area: dr?.area || '',
       work_item_id: ri.work_item_id,
       item_name: wi?.name || '',
       unit: wi?.unit || '',

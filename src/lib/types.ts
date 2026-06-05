@@ -10,8 +10,8 @@ export interface WorkItem {
 export interface DailyReport {
   id: number
   report_date: string
+  area: string
   created_at: string
-  areas?: string[]
   total_points?: number
   work_items?: ReportWorkItem[]
 }
@@ -20,7 +20,6 @@ export interface ReportWorkItem {
   id: number
   report_id: number
   work_item_id: number
-  area: string
   quantity: number
   item_name?: string
   unit?: string

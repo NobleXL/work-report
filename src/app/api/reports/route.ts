@@ -6,7 +6,6 @@ interface WorkItemRef {
 }
 
 interface ReportWorkItemRef {
-  area?: string | null
   quantity: number | string
   work_items?: WorkItemRef | WorkItemRef[] | null
 }
@@ -44,7 +43,6 @@ export async function GET() {
     const reportWorkItems = (r.report_work_items || []) as ReportWorkItemRef[]
     return {
       ...r,
-      areas: Array.from(new Set(reportWorkItems.map((ri) => ri.area).filter(Boolean))),
       total_points: calcTotal(reportWorkItems),
     }
   })
@@ -54,21 +52,20 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { report_date, work_items } = body
+  const { report_date, area, work_items } = body
 
   const { data: report, error: rErr } = await supabase
     .from('daily_reports')
-    .insert({ report_date })
+    .insert({ report_date, area })
     .select()
     .single()
 
   if (rErr) return NextResponse.json({ error: rErr.message }, { status: 500 })
 
   const rid = report.id
-  const rows = (work_items as { item_id: number; area: string; quantity: number }[]).map((w) => ({
+  const rows = (work_items as { item_id: number; quantity: number }[]).map((w) => ({
     report_id: rid,
     work_item_id: w.item_id,
-    area: w.area,
     quantity: w.quantity,
   }))
 

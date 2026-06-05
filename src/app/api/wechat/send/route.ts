@@ -12,7 +12,6 @@ interface WorkItemRef {
 }
 
 interface ReportWorkItemRef {
-  area?: string | null
   quantity: number | string
   work_items?: WorkItemRef | WorkItemRef[] | null
 }
@@ -41,8 +40,9 @@ export async function POST() {
 
   const { data: reports, error: rErr } = await supabase
     .from('daily_reports')
-    .select('id, report_date, report_work_items(area, quantity, work_items(name, unit, points_per_unit))')
+    .select('id, report_date, area, report_work_items(quantity, work_items(name, unit, points_per_unit))')
     .eq('report_date', today)
+    .order('area', { ascending: true })
     .order('created_at', { ascending: true })
 
   if (rErr) return NextResponse.json({ error: rErr.message }, { status: 500 })
@@ -68,10 +68,11 @@ export async function POST() {
   const areaMap = new Map<string, Map<string, { name: string; unit: string; qty: number; rate: number }>>()
 
   for (const report of reports) {
+    const area = report.area || '未填写区域'
+    if (!areaMap.has(area)) areaMap.set(area, new Map())
+    const itemMap = areaMap.get(area)!
+
     for (const ri of ((report.report_work_items || []) as ReportWorkItemRef[])) {
-      const area = ri.area || '未填写区域'
-      if (!areaMap.has(area)) areaMap.set(area, new Map())
-      const itemMap = areaMap.get(area)!
       const workItem = Array.isArray(ri.work_items) ? ri.work_items[0] : ri.work_items
       const name = workItem?.name || ''
       const unit = workItem?.unit || ''

@@ -11,7 +11,7 @@ import { toast } from 'sonner'
 interface Report {
   id: number
   report_date: string
-  areas: string[]
+  area: string
   total_points: number
 }
 
@@ -137,7 +137,7 @@ export default function HomePage() {
               <CardContent className="p-4">
                 <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-2">
                   <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{r.report_date}</span>
-                  <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{r.areas.join('、') || '未填写区域'}</span>
+                  <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{r.area || '未填写区域'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <Badge variant="secondary" className="text-base font-bold px-3 py-1">
