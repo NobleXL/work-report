@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 const navItems = [
   { href: '/', label: '日报', icon: ClipboardList },
   { href: '/report', label: '填写', icon: PenLine },
-  { href: '/items', label: '子项', icon: Settings },
+  { href: '/items', label: '工作项', icon: Settings },
   { href: '/summary', label: '汇总', icon: BarChart3 },
 ]
 

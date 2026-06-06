@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-interface SubItemRef {
+interface WorkItemRef {
   points_per_unit?: number | string | null
 }
 
-interface ReportSubItemRef {
+interface ReportWorkItemRef {
   quantity: number | string
-  sub_items?: SubItemRef | SubItemRef[] | null
+  sub_items?: WorkItemRef | WorkItemRef[] | null
 }
 
 export async function GET() {
@@ -24,7 +24,7 @@ export async function GET() {
     if (!dailyStats[key]) dailyStats[key] = { report_count: 0, total_points: 0 }
     dailyStats[key].report_count += 1
     for (const ri of (r.report_sub_items || [])) {
-      const item = ri as ReportSubItemRef
+      const item = ri as ReportWorkItemRef
       const ppus = item.sub_items
       const ppu = Array.isArray(ppus) ? ppus[0]?.points_per_unit : ppus?.points_per_unit
       dailyStats[key].total_points += Number(item.quantity) * Number(ppu ?? 0)
@@ -47,7 +47,7 @@ export async function GET() {
     if (!construction_areaStats[construction_area]) construction_areaStats[construction_area] = { report_count: 0, total_points: 0 }
     construction_areaStats[construction_area].report_count += 1
     for (const ri of (r.report_sub_items || [])) {
-      const item = ri as ReportSubItemRef
+      const item = ri as ReportWorkItemRef
       const ppus = item.sub_items
       const ppu = Array.isArray(ppus) ? ppus[0]?.points_per_unit : ppus?.points_per_unit
       construction_areaStats[construction_area].total_points += Number(item.quantity) * Number(ppu ?? 0)

@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-interface SubItemRef {
+interface WorkItemRef {
   points_per_unit?: number | string | null
 }
 
-interface ReportSubItemRef {
+interface ReportWorkItemRef {
   quantity: number | string
-  sub_items?: SubItemRef | SubItemRef[] | null
+  sub_items?: WorkItemRef | WorkItemRef[] | null
 }
 
-function calcTotal(reportSubItems: ReportSubItemRef[]) {
-  return (reportSubItems || []).reduce((sum, ri) => {
+function calcTotal(reportWorkItems: ReportWorkItemRef[]) {
+  return (reportWorkItems || []).reduce((sum, ri) => {
     const ppus = ri.sub_items
     const ppu = Array.isArray(ppus) ? ppus[0]?.points_per_unit : ppus?.points_per_unit
     return sum + Number(ri.quantity) * Number(ppu ?? 0)
@@ -40,10 +40,10 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const reports = (data || []).map((r) => {
-    const reportSubItems = (r.report_sub_items || []) as ReportSubItemRef[]
+    const reportWorkItems = (r.report_sub_items || []) as ReportWorkItemRef[]
     return {
       ...r,
-      total_points: calcTotal(reportSubItems),
+      total_points: calcTotal(reportWorkItems),
     }
   })
 
@@ -52,20 +52,21 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { report_date, construction_area, sub_items } = body
+  const { report_date, sub_item, construction_area, work_items, sub_items } = body
 
   const { data: report, error: rErr } = await supabase
     .from('daily_reports')
-    .insert({ report_date, construction_area })
+    .insert({ report_date, sub_item, construction_area })
     .select()
     .single()
 
   if (rErr) return NextResponse.json({ error: rErr.message }, { status: 500 })
 
   const rid = report.id
-  const rows = (sub_items as { sub_item_id: number; quantity: number }[]).map((w) => ({
+  const submittedItems = (work_items || sub_items || []) as { work_item_id?: number; sub_item_id?: number; quantity: number }[]
+  const rows = submittedItems.map((w) => ({
     report_id: rid,
-    sub_item_id: w.sub_item_id,
+    sub_item_id: w.work_item_id ?? w.sub_item_id,
     quantity: w.quantity,
   }))
 

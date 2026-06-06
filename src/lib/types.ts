@@ -1,4 +1,4 @@
-export interface SubItem {
+export interface WorkItem {
   id: number
   name: string
   unit: string
@@ -10,13 +10,14 @@ export interface SubItem {
 export interface DailyReport {
   id: number
   report_date: string
+  sub_item: string
   construction_area: string
   created_at: string
   total_points?: number
-  sub_items?: ReportSubItem[]
+  work_items?: ReportWorkItem[]
 }
 
-export interface ReportSubItem {
+export interface ReportWorkItem {
   id: number
   report_id: number
   sub_item_id: number
@@ -28,6 +29,7 @@ export interface ReportSubItem {
 
 export interface SummaryRow {
   report_date: string
+  sub_item: string
   construction_area: string
   sub_item_id: number
   item_name: string

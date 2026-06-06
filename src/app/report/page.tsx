@@ -12,7 +12,7 @@ import { Plus, X, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 
-interface SubItem {
+interface WorkItem {
   id: number
   name: string
   unit: string
@@ -20,7 +20,7 @@ interface SubItem {
   is_active: boolean
 }
 
-interface SelectedItem {
+interface SelectedWorkItem {
   id: number
   name: string
   unit: string
@@ -39,8 +39,8 @@ function todayStr() {
 
 export default function ReportPage() {
   const router = useRouter()
-  const [items, setItems] = useState<SubItem[]>([])
-  const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([])
+  const [items, setItems] = useState<WorkItem[]>([])
+  const [selectedItems, setSelectedItems] = useState<SelectedWorkItem[]>([])
   const [selectedId, setSelectedId] = useState('')
   const [qty, setQty] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -48,6 +48,7 @@ export default function ReportPage() {
   const dateRef = todayStr()
   const [form, setForm] = useState({
     report_date: dateRef,
+    sub_item: '',
     construction_area: '',
   })
 
@@ -55,7 +56,7 @@ export default function ReportPage() {
     fetch('/api/items')
       .then((r) => r.json())
       .then(setItems)
-      .catch(() => toast.error('加载子项失败'))
+      .catch(() => toast.error('加载工作项失败'))
   }, [])
 
   const activeItems = items.filter((i) => i.is_active)
@@ -63,7 +64,7 @@ export default function ReportPage() {
   function addItem() {
     const id = parseInt(selectedId)
     const q = parseFloat(qty)
-    if (!id) { toast.error('请选择子项'); return }
+    if (!id) { toast.error('请选择工作项'); return }
     if (!q || q <= 0) { toast.error('请输入有效数量'); return }
 
     const item = items.find((i) => i.id === id)
@@ -89,16 +90,19 @@ export default function ReportPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    const trimmedSubItem = form.sub_item.trim()
     const trimmedConstructionArea = form.construction_area.trim()
+    if (!trimmedSubItem) { toast.error('请输入子项'); return }
     if (!trimmedConstructionArea) { toast.error('请输入施工区域'); return }
-    if (!selectedItems.length) { toast.error('请至少添加一个子项'); return }
+    if (!selectedItems.length) { toast.error('请至少添加一个工作项'); return }
 
     setSubmitting(true)
     try {
       const body = {
         ...form,
+        sub_item: trimmedSubItem,
         construction_area: trimmedConstructionArea,
-        sub_items: selectedItems.map((s) => ({ sub_item_id: s.id, quantity: s.quantity })),
+        work_items: selectedItems.map((s) => ({ work_item_id: s.id, quantity: s.quantity })),
       }
       const res = await fetch('/api/reports', {
         method: 'POST',
@@ -125,34 +129,27 @@ export default function ReportPage() {
       <form onSubmit={handleSubmit}>
         <Card className="mb-4">
           <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_1fr_1fr_1.2fr_112px_auto] md:items-end">
               <div>
                 <Label>日期</Label>
                 <Input type="date" value={form.report_date} onChange={(e) => setForm({ ...form, report_date: e.target.value })} required />
               </div>
               <div>
+                <Label>子项</Label>
+                <Input placeholder="如 一层东区" value={form.sub_item} onChange={(e) => setForm({ ...form, sub_item: e.target.value })} required />
+              </div>
+              <div>
                 <Label>施工区域</Label>
                 <Input placeholder="如 中压配电室" value={form.construction_area} onChange={(e) => setForm({ ...form, construction_area: e.target.value })} required />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="mb-4">
-          <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-base">子项</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-2">
-            {/* Add sub item row */}
-            <div className="flex gap-2 items-end flex-wrap mb-3">
-              <div className="flex-1 min-w-[160px]">
-                <Label className="text-xs">选择子项</Label>
+              <div>
+                <Label>工作项</Label>
                 <select
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={selectedId}
                   onChange={(e) => setSelectedId(e.target.value)}
                 >
-                  <option value="">— 选择子项 —</option>
+                  <option value="">{activeItems.length ? '— 选择工作项 —' : '暂无启用工作项'}</option>
                   {activeItems.map((i) => (
                     <option key={i.id} value={i.id}>
                       {i.name} ({i.unit} · {i.points_per_unit.toFixed(1)}分)
@@ -160,19 +157,25 @@ export default function ReportPage() {
                   ))}
                 </select>
               </div>
-              <div className="w-24">
-                <Label className="text-xs">数量</Label>
+              <div>
+                <Label>数量</Label>
                 <Input type="number" step="0.1" min="0" value={qty} onChange={(e) => setQty(e.target.value)} />
               </div>
               <Button type="button" onClick={addItem} className="h-9">
                 <Plus className="h-4 w-4 mr-1" />添加
               </Button>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Selected items list */}
+        <Card className="mb-4">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-base">工作项</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-2">
             {selectedItems.length === 0 ? (
               <div className="text-center text-sm text-muted-foreground py-6 border border-dashed rounded-md">
-                请从上方选择子项并添加
+                请从上方选择工作项并添加
               </div>
             ) : (
               <div className="space-y-2">

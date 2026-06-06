@@ -15,8 +15,9 @@ import * as XLSX from 'xlsx'
 
 type ExportRow = {
   日期: string
-  区域: string
   子项: string
+  区域: string
+  工作项: string
   数量: number
   单位: string
   单价: number
@@ -35,6 +36,7 @@ function getInitialDateRange() {
 
 interface SummaryRow {
   report_date: string
+  sub_item: string
   construction_area: string
   sub_item_id: number
   item_name: string
@@ -86,8 +88,9 @@ export default function SummaryPage() {
 
     const data: ExportRow[] = rows.map((r) => ({
       日期: r.report_date,
+      子项: r.sub_item,
       区域: r.construction_area,
-      子项: r.item_name,
+      工作项: r.item_name,
       数量: r.total_qty,
       单位: r.unit,
       单价: r.points_per_unit,
@@ -97,8 +100,9 @@ export default function SummaryPage() {
     // Add total row
     data.push({
       日期: '',
+      子项: '',
       区域: '',
-      子项: '合计',
+      工作项: '合计',
       数量: 0,
       单位: '',
       单价: 0,
@@ -177,8 +181,9 @@ export default function SummaryPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>日期</TableHead>
-                    <TableHead>区域</TableHead>
                     <TableHead>子项</TableHead>
+                    <TableHead>区域</TableHead>
+                    <TableHead>工作项</TableHead>
                     <TableHead className="text-right">数量</TableHead>
                     <TableHead>单位</TableHead>
                     <TableHead className="text-right">单价</TableHead>
@@ -191,6 +196,7 @@ export default function SummaryPage() {
                     return (
                       <TableRow key={idx}>
                         <TableCell>{r.report_date}</TableCell>
+                        <TableCell>{r.sub_item}</TableCell>
                         <TableCell>{r.construction_area}</TableCell>
                         <TableCell>{r.item_name}</TableCell>
                         <TableCell className="text-right tabular-nums">{r.total_qty.toFixed(1)}</TableCell>
@@ -203,7 +209,7 @@ export default function SummaryPage() {
                 </TableBody>
                 <TableFooter>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-right font-bold">总计</TableCell>
+                    <TableCell colSpan={7} className="text-right font-bold">总计</TableCell>
                     <TableCell className="text-right tabular-nums font-bold text-primary">{grandTotal.toFixed(1)}</TableCell>
                   </TableRow>
                 </TableFooter>

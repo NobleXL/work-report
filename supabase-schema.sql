@@ -12,9 +12,12 @@ CREATE TABLE IF NOT EXISTS sub_items (
 CREATE TABLE IF NOT EXISTS daily_reports (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   report_date DATE NOT NULL,
+  sub_item VARCHAR(255) NOT NULL DEFAULT '',
   construction_area VARCHAR(255) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE daily_reports ADD COLUMN IF NOT EXISTS sub_item VARCHAR(255) NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS report_sub_items (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -37,7 +40,7 @@ CREATE TABLE IF NOT EXISTS person_phone_map (
   phone VARCHAR(50) NOT NULL
 );
 
--- 插入默认子项
+-- 插入默认工作项
 INSERT INTO sub_items (name, unit, points_per_unit, sort_order) VALUES
   ('照明灯具安装', '个', 14.5, 1),
   ('保护管安装', '米', 4.8, 2);

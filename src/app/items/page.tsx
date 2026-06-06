@@ -16,7 +16,7 @@ import { ArrowLeft, Plus, Pencil, Power, PowerOff } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 
-interface SubItem {
+interface WorkItem {
   id: number
   name: string
   unit: string
@@ -26,7 +26,7 @@ interface SubItem {
 }
 
 export default function ItemsPage() {
-  const [items, setItems] = useState<SubItem[]>([])
+  const [items, setItems] = useState<WorkItem[]>([])
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState<number | null>(null)
   const [editName, setEditName] = useState('')
@@ -62,7 +62,7 @@ export default function ItemsPage() {
     } catch { toast.error('添加失败') }
   }
 
-  function openEdit(item: SubItem) {
+  function openEdit(item: WorkItem) {
     setEditId(item.id)
     setEditName(item.name)
     setEditUnit(item.unit)
@@ -95,13 +95,13 @@ export default function ItemsPage() {
     <div>
       <div className="flex items-center gap-3 mb-4">
         <Link href="/"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-        <h1 className="text-xl font-bold">⚙ 子项管理</h1>
+        <h1 className="text-xl font-bold">⚙ 工作项管理</h1>
       </div>
 
       <Card>
         <CardContent className="p-4">
           <p className="text-sm text-muted-foreground mb-4">
-            在这里添加、编辑、启用/禁用子项。被禁用的子项在填写日报时不显示。
+            在这里添加、编辑、启用/禁用工作项。被禁用的工作项在填写日报时不显示。
           </p>
 
           {loading ? (
@@ -145,7 +145,7 @@ export default function ItemsPage() {
           )}
 
           <div className="flex gap-2 mt-4 pt-4 border-t flex-wrap">
-            <Input placeholder="子项名称" value={newName} onChange={(e) => setNewName(e.target.value)} className="flex-1 min-w-[100px]" />
+            <Input placeholder="工作项名称" value={newName} onChange={(e) => setNewName(e.target.value)} className="flex-1 min-w-[100px]" />
             <Input placeholder="单位" value={newUnit} onChange={(e) => setNewUnit(e.target.value)} className="w-20" />
             <Input type="number" step="0.1" placeholder="工分" value={newPoints} onChange={(e) => setNewPoints(e.target.value)} className="w-24" />
             <Button onClick={addItem}><Plus className="h-4 w-4 mr-1" />添加</Button>
@@ -157,7 +157,7 @@ export default function ItemsPage() {
       <Dialog open={editId !== null} onOpenChange={(open) => { if (!open) setEditId(null) }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>编辑子项</DialogTitle>
+            <DialogTitle>编辑工作项</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div><Label>名称</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
